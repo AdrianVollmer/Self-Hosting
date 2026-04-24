@@ -59,7 +59,7 @@ version: '3.8'
 
 services:
   vaultwarden:
-    image: docker.io/vaultwarden/server:${VAULTWARDEN_VERSION}
+    image: docker.io/vaultwarden/server:1.35.7
     container_name: vaultwarden
     restart: unless-stopped
     environment:
@@ -76,7 +76,7 @@ services:
       - "10002:80"
 ```
 
-Here, `ADMIN_TOKEN=...` would be defined in `env.app`, and `DOMAIN_SUFFIX=...`
+Here, `VAULTWARDEN_ADMIN_TOKEN=...` would be defined in `env.app`, and `DOMAIN_SUFFIX=...`
 would be defined in `env.shared`.
 
 Enable and start the service:
