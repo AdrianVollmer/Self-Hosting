@@ -1,0 +1,19 @@
+[Unit]
+Description=Self-hosted container service: %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/container/%i
+Environment=SERVICE_NAME=%i
+Delegate=yes
+TimeoutStopSec=120
+
+ExecStart=/opt/container/run.sh %i
+ExecStop=/usr/bin/podman-compose down
+ExecReload=/usr/bin/podman-compose restart
+
+[Install]
+WantedBy=multi-user.target
