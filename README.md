@@ -105,6 +105,7 @@ In this example, we assume your local network suffix is `fritz.box`.
 Install with `apt install caddy`, then edit your configuration:
 
 ```
+# /etc/caddy/Caddyfile
 {
     # Use internal CA for local domains
     local_certs
@@ -143,7 +144,7 @@ PartOf=caddy.service
 [Service]
 Type=oneshot
 # Adjust variables as necessary
-ExecStart=bash -c "SUFFIX=fritz.box DNS_SERVER=192.168.178.1 /opt/container/dns-update.sh"
+ExecStart=bash -c "SUFFIX=fritz.box DNS_SERVER=192.168.178.1 IP=192.168.178.42 /opt/container/dns-update.sh"
 
 [Install]
 WantedBy=caddy.service
