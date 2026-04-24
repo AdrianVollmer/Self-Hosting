@@ -120,7 +120,7 @@ vault.fritz.box {
 ```
 
 The root certificate will be in
-`home/caddy/.local/share/caddy/pki/authorities/local/root.crt`, which you
+`/home/caddy/.local/share/caddy/pki/authorities/local/root.crt`, which you
 should distribute to all your devices.
 
 Finally, add a DNS entry for `vault.fritz.box` pointing at the host.
