@@ -6,12 +6,11 @@ cd "$(dirname "$0")/$SERVICE_NAME"
 
 # Source environment variables
 env_vars=""
-if [ -f env.app ]; then
-	env_vars="$env_vars\n$(cat env.app)"
-fi
-if [ -f ../env.shared ]; then
-	env_vars="$env_vars\n$(cat env.shared)"
-fi
+for file in env.app ../env.shared ; do
+  if [ -f $file ]; then
+    env_vars="$env_vars$(cat "$file")"
+  fi
+done
 
 run_podman_compose() {
 	/usr/bin/podman-compose --env-file <(echo "$env_vars") up -d --force-recreate
