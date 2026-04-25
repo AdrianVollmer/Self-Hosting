@@ -162,3 +162,15 @@ systemctl enable --now dns-update.service
 
 `PartOf=caddy.service` propagates stop/restart from caddy, and
 `WantedBy=caddy.service` pulls the unit in whenever caddy is started.
+
+# Access
+
+In my case, I enabled the WireGuard VPN in my FritzBox. I then use the [WG
+Tunnel](http://github.com/wgtunnel/wgtunnel) app for Android to access all my
+self-hosted services.
+
+If you want your friends to access your services, perhaps something like
+[Tailscale](https://tailscale.com/) (or its FOSS pendant
+[Headscale](https://headscale.net/)) would be more approriate. Or, if you like
+to live dangerously, host everything on a VPS and expose caddy to the public.
+Personally, I wouldn't, though.
