@@ -144,7 +144,10 @@ PartOf=caddy.service
 [Service]
 Type=oneshot
 # Adjust variables as necessary
-ExecStart=bash -c "SUFFIX=fritz.box DNS_SERVER=192.168.178.1 IP=192.168.178.42 /opt/container/dns-update.sh"
+Environment=SUFFIX=fritz.box
+Environment=DNS_SERVER=192.168.178.1
+Environment=IP=192.168.178.42
+ExecStart=/opt/container/dns-update.sh
 
 [Install]
 WantedBy=caddy.service

@@ -13,7 +13,8 @@ TimeoutStopSec=120
 
 ExecStart=/opt/container/run.sh %i
 ExecStop=/usr/bin/podman-compose down
-ExecReload=/usr/bin/podman-compose restart
+ExecReload=/usr/bin/podman-compose pull
+ExecReload=/usr/bin/podman-compose up -d --force-recreate
 
 [Install]
 WantedBy=multi-user.target

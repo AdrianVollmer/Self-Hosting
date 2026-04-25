@@ -1,11 +1,16 @@
 #!/bin/bash
-set -x
+set -e
 
 TTL="${TTL:-3600}"
 DNS_SERVER="${DNS_SERVER:-192.168.178.1}"
 SUFFIX="${SUFFIX:-fritz.box}"
 
-for DNS_NAME in $(grep -Eo "^[a-z-]+.$SUFFIX" /etc/caddy/Caddyfile); do
+if [ -z "${IP:-}" ]; then
+  echo "Error: IP is not set" >&2
+  exit 1
+fi
+
+for DNS_NAME in $(grep -Eo "^[a-z0-9-]+\.$SUFFIX" /etc/caddy/Caddyfile); do
   nsupdate <<EOF
 server ${DNS_SERVER}
 update delete ${DNS_NAME} A
