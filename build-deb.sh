@@ -33,7 +33,7 @@ mkdir -p \
   "$PKG_DIR/usr/share/doc/anchorage" \
   "$PKG_DIR/etc/anchorage" \
   "$PKG_DIR/etc/systemd/system" \
-  "$PKG_DIR/opt/anchorage"
+  "$PKG_DIR/var/lib/anchorage"
 
 # ---------------------------------------------------------------------------
 # Scripts and units
@@ -118,7 +118,7 @@ set -e
 
 ANCHORAGE_USER=anchorage
 ANCHORAGE_HOME=/var/lib/anchorage
-ANCHORAGE_DIR=/opt/anchorage
+ANCHORAGE_DIR=/var/lib/anchorage
 
 # Create system user for rootless podman
 if ! id -u "$ANCHORAGE_USER" >/dev/null 2>&1; then
@@ -156,9 +156,9 @@ cat <<MSG
 anchorage installed successfully.
 
 Next steps:
-  1. Edit /etc/systemd/system/dns-update.service and set SUFFIX, DNS_SERVER, IP.
-  2. Create /opt/anchorage/env.shared and set DOMAIN_SUFFIX=<your.suffix>.
-  3. Add services under /opt/anchorage/<name>/docker-compose.yml.
+  1. Edit /etc/anchorage/anchorage.conf -- set DOMAIN_SUFFIX, and optionally
+     IP and DNS_SERVER if you want automatic DNS registration.
+  2. Add services under /var/lib/anchorage/<name>/docker-compose.yml.
   4. Enable caddy:  systemctl enable --now caddy
   5. Enable a service:  systemctl enable --now container@<name>.service
 
@@ -176,7 +176,7 @@ cat > "$PKG_DIR/DEBIAN/prerm" <<'EOF'
 set -e
 
 # Stop all anchorage-managed services gracefully before removal.
-# Data under /opt/anchorage is intentionally preserved.
+# Data under /var/lib/anchorage is intentionally preserved.
 
 systemctl stop 'container@*.service' 2>/dev/null || true
 systemctl stop anchorage-gen-caddyfile.service dns-update.service 2>/dev/null || true
@@ -196,7 +196,7 @@ if [ "$1" = "purge" ]; then
   # Remove generated Caddyfile (Caddy's own files are Caddy's responsibility)
   rm -f /etc/caddy/Caddyfile
 
-  # Disable linger and remove system user; preserve /opt/anchorage data
+  # Disable linger and remove system user; preserve /var/lib/anchorage data
   loginctl disable-linger anchorage 2>/dev/null || true
   userdel anchorage 2>/dev/null || true
 

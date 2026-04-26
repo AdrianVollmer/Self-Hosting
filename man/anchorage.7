@@ -62,11 +62,11 @@ Defaults to 3600.
 .
 .SH DIRECTORY STRUCTURE
 All container service definitions live under
-.IR /opt/anchorage/ .
+.IR /var/lib/anchorage/ .
 Each service occupies its own subdirectory:
 .PP
 .nf
-/opt/anchorage/
+/var/lib/anchorage/
     env.shared              # Shared container env vars (optional)
     <service>/
         docker-compose.yml  # Compose file with caddy labels
@@ -89,7 +89,7 @@ lines are sufficient.
 .SS 1. Create the service directory
 .PP
 .nf
-mkdir -p /opt/anchorage/myapp/data
+mkdir -p /var/lib/anchorage/myapp/data
 .fi
 .SS 2. Write docker-compose.yml
 Add
@@ -99,7 +99,7 @@ and
 labels so anchorage can generate the reverse proxy entry automatically:
 .PP
 .nf
-# /opt/anchorage/myapp/docker-compose.yml
+# /var/lib/anchorage/myapp/docker-compose.yml
 services:
   myapp:
     image: example/myapp:latest
@@ -172,7 +172,7 @@ Instantiate as
 where
 .I <name>
 matches the directory under
-.IR /opt/anchorage/ .
+.IR /var/lib/anchorage/ .
 Runs as the
 .B anchorage
 system user (rootless podman).
@@ -192,10 +192,10 @@ Runs after caddy starts.
 .I /etc/anchorage/anchorage.conf
 System-wide configuration.
 .TP
-.I /opt/anchorage/
+.I /var/lib/anchorage/
 Root directory for all service definitions.
 .TP
-.I /opt/anchorage/env.shared
+.I /var/lib/anchorage/env.shared
 Environment variables passed into all containers (optional).
 .TP
 .I /etc/caddy/Caddyfile

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Generate /etc/caddy/Caddyfile from container service definitions.
 
-Scans /opt/anchorage/*/docker-compose.yml for services with the labels:
+Scans /var/lib/anchorage/*/docker-compose.yml for services with the labels:
   caddy.host: <subdomain>
   caddy.port: <host-port>
 
 Reads DOMAIN_SUFFIX from the environment (set via EnvironmentFile in the
-systemd unit, sourced from /opt/anchorage/env.shared).
+systemd unit, sourced from /var/lib/anchorage/env.shared).
 """
 
 import logging
@@ -19,7 +19,7 @@ import yaml
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger(__name__)
 
-BASE_DIR = Path("/opt/anchorage")
+BASE_DIR = Path("/var/lib/anchorage")
 CADDYFILE = Path("/etc/caddy/Caddyfile")
 
 

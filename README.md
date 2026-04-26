@@ -36,10 +36,10 @@ systemctl daemon-reload
 
 A service consists of:
 
-- A directory under `/opt/anchorage/<name>/`
+- A directory under `/var/lib/anchorage/<name>/`
 - A `docker-compose.yml` with `caddy.host` and `caddy.port` labels
 - Optional: `env.app` for service-specific environment variables
-- `/opt/anchorage/env.shared` for variables shared by all services (including
+- `/var/lib/anchorage/env.shared` for variables shared by all services (including
   `DOMAIN_SUFFIX`)
 
 Always prefer SQLite over a separate database process where possible -- it
@@ -51,7 +51,7 @@ Postgres, run one shared instance and reference it from `env.shared`.
 ## Caddyfile generation
 
 When caddy starts or restarts, `anchorage-gen-caddyfile.service` runs first
-and scans all `/opt/anchorage/*/docker-compose.yml` files for services with
+and scans all `/var/lib/anchorage/*/docker-compose.yml` files for services with
 these two labels:
 
 | Label | Meaning |
@@ -65,11 +65,11 @@ edit it by hand.
 ## Example: Vaultwarden
 
 ```console
-mkdir -p /opt/anchorage/vaultwarden/data
+mkdir -p /var/lib/anchorage/vaultwarden/data
 ```
 
 ```yaml
-# /opt/anchorage/vaultwarden/docker-compose.yml
+# /var/lib/anchorage/vaultwarden/docker-compose.yml
 services:
   vaultwarden:
     image: docker.io/vaultwarden/server:latest
@@ -91,7 +91,7 @@ services:
       - "10002:80"
 ```
 
-`VAULTWARDEN_ADMIN_TOKEN` goes in `/opt/anchorage/vaultwarden/env.app`.
+`VAULTWARDEN_ADMIN_TOKEN` goes in `/var/lib/anchorage/vaultwarden/env.app`.
 `DOMAIN_SUFFIX` is set in `/etc/anchorage/anchorage.conf`.
 
 Enable and start:

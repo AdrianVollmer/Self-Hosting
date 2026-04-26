@@ -9,7 +9,7 @@ Type=oneshot
 RemainAfterExit=yes
 User=anchorage
 Group=anchorage
-WorkingDirectory=/opt/anchorage/%i
+WorkingDirectory=/var/lib/anchorage/%i
 Environment=SERVICE_NAME=%i
 Delegate=yes
 TimeoutStopSec=120

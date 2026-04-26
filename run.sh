@@ -1,5 +1,5 @@
 #!/bin/bash
-# Working directory is set to /opt/anchorage/$SERVICE_NAME by the systemd unit.
+# Working directory is set to /var/lib/anchorage/$SERVICE_NAME by the systemd unit.
 
 set -e
 
