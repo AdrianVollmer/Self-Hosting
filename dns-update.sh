@@ -1,16 +1,26 @@
 #!/bin/bash
 set -e
 
+# Variables are sourced from /etc/anchorage/anchorage.conf via the systemd unit.
 TTL="${TTL:-3600}"
-DNS_SERVER="${DNS_SERVER:-192.168.178.1}"
-SUFFIX="${SUFFIX:-fritz.box}"
 
-if [ -z "${IP:-}" ]; then
-  echo "Error: IP is not set" >&2
+if [ -z "${DOMAIN_SUFFIX:-}" ]; then
+  echo "Error: DOMAIN_SUFFIX is not set in /etc/anchorage/anchorage.conf" >&2
   exit 1
 fi
 
-for DNS_NAME in $(grep -Eo "^[a-z0-9-]+\.$SUFFIX" /etc/caddy/Caddyfile); do
+if [ -z "${DNS_SERVER:-}" ]; then
+  echo "Error: DNS_SERVER is not set in /etc/anchorage/anchorage.conf" >&2
+  exit 1
+fi
+
+if [ -z "${IP:-}" ]; then
+  echo "Error: IP is not set in /etc/anchorage/anchorage.conf" >&2
+  exit 1
+fi
+
+for DNS_NAME in $(grep -Eo "^[a-z0-9-]+\.${DOMAIN_SUFFIX}" /etc/caddy/Caddyfile); do
+  echo "Registering $DNS_NAME -> $IP"
   nsupdate <<EOF
 server ${DNS_SERVER}
 update delete ${DNS_NAME} A

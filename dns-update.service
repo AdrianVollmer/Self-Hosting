@@ -1,0 +1,14 @@
+[Unit]
+Description=Update DNS entries for Anchorage services
+Documentation=man:anchorage(7)
+After=caddy.service
+BindsTo=caddy.service
+PartOf=caddy.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/anchorage/anchorage.conf
+ExecStart=/usr/lib/anchorage/dns-update.sh
+
+[Install]
+WantedBy=caddy.service

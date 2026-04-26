@@ -1,17 +1,20 @@
 [Unit]
-Description=Self-hosted container service: %i
+Description=Anchorage container service: %i
+Documentation=man:anchorage(7)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/opt/container/%i
+User=anchorage
+Group=anchorage
+WorkingDirectory=/opt/anchorage/%i
 Environment=SERVICE_NAME=%i
 Delegate=yes
 TimeoutStopSec=120
 
-ExecStart=/opt/container/run.sh %i
+ExecStart=/usr/lib/anchorage/run.sh
 ExecStop=/usr/bin/podman-compose down
 ExecReload=/usr/bin/podman-compose pull
 ExecReload=/usr/bin/podman-compose up -d --force-recreate

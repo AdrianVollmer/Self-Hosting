@@ -1,71 +1,86 @@
-Self-hosting with containers
-============================
+anchorage
+=========
 
-Leverage containers and systemd services to easily self-host apps.
+A lightweight framework for self-hosting containerized applications using
+podman, caddy, and systemd.
 
-Assumes podman, but works with docker as well.
-
-# Prerequisites
-
-Systemd and podman-compose. Install on Debian-like systems:
-
-```console
-apt install podman podman-compose
-```
+- Per-service lifecycle management via a systemd template unit
+- Automatic TLS via Caddy's internal CA (`local_certs`)
+- Caddyfile generated automatically from labels in `docker-compose.yml`
+- Dynamic DNS registration for local network hostnames
+- Rootless container execution under a dedicated `anchorage` system user
 
 # Installation
 
+Build and install the Debian package (requires `dpkg-deb`, `gzip`):
+
 ```console
-mkdir -p /opt/container
-cp run.sh /opt/container
-cp container@.service /etc/systemd/system
+./build-deb.sh
+dpkg -i anchorage_*.deb
+```
+
+This installs all scripts, systemd units, and creates the `anchorage` system
+user with rootless podman configured.
+
+Alternatively, install manually:
+
+```console
+apt install podman podman-compose caddy python3 python3-yaml bind9-dnsutils
+cp gen-caddyfile.py run.sh dns-update.sh /usr/lib/anchorage/
+cp container@.service anchorage-gen-caddyfile.service dns-update.service \
+   /etc/systemd/system/
 systemctl daemon-reload
 ```
 
 # Set up a new service
 
-A service now consist of:
+A service consists of:
 
-- a directory in `/opt/container`
-- a `docker-compose.yml` file
-- Optional: a `env.app` in the container directory
-- Optional: a `/opt/container/env.shared` for environment variables shared by
-  all containers.
+- A directory under `/opt/anchorage/<name>/`
+- A `docker-compose.yml` with `caddy.host` and `caddy.port` labels
+- Optional: `env.app` for service-specific environment variables
+- `/opt/anchorage/env.shared` for variables shared by all services (including
+  `DOMAIN_SUFFIX`)
 
-Always try to configure your services to use SQLite, if possible. This gives you
-a single file which can be easily copied, backupped or moved.
+Always prefer SQLite over a separate database process where possible -- it
+gives you a single file you can copy, back up, or move. If you need
+Postgres, run one shared instance and reference it from `env.shared`.
 
-The next best option is to set up a single Postgres service on the host system.
-Hostname and port can be defined in `env.shared`.
+[LinuxServer.io](https://docs.linuxserver.io/images/) has many suitable images.
 
-[LinuxServer.io](https://docs.linuxserver.io/images/) has lots of suitable
-images.
+## Caddyfile generation
 
-## Example
+When caddy starts or restarts, `anchorage-gen-caddyfile.service` runs first
+and scans all `/opt/anchorage/*/docker-compose.yml` files for services with
+these two labels:
 
-We will use [Vaultwarden](https://www.vaultwarden.net/) as an example.
+| Label | Meaning |
+|---|---|
+| `caddy.host` | Subdomain (without the domain suffix) |
+| `caddy.port` | Host port mapped in the `ports` section |
 
-Create the directories:
+The Caddyfile is written to `/etc/caddy/Caddyfile` automatically. Do not
+edit it by hand.
+
+## Example: Vaultwarden
 
 ```console
-mkdir -p /opt/container/vaultwarden/data
+mkdir -p /opt/anchorage/vaultwarden/data
 ```
 
-Create the Docker compose file:
-
 ```yaml
-# /opt/container/vaultwarden/docker-compose.yml
-version: '3.8'
-
+# /opt/anchorage/vaultwarden/docker-compose.yml
 services:
   vaultwarden:
-    image: docker.io/vaultwarden/server:1.35.7
-    container_name: vaultwarden
+    image: docker.io/vaultwarden/server:latest
     restart: unless-stopped
+    labels:
+      caddy.host: vault        # resolves to vault.<DOMAIN_SUFFIX>
+      caddy.port: "10002"
     environment:
       - ADMIN_TOKEN=${VAULTWARDEN_ADMIN_TOKEN}
       - DOMAIN=https://vault.${DOMAIN_SUFFIX}
-      - SIGNUPS_ALLOWED=false  # change to `true` once so you can sign up
+      - SIGNUPS_ALLOWED=false
       - WEBSOCKET_ENABLED=true
       - ROCKET_PORT=80
     volumes:
@@ -76,101 +91,71 @@ services:
       - "10002:80"
 ```
 
-Here, `VAULTWARDEN_ADMIN_TOKEN=...` would be defined in `env.app`, and `DOMAIN_SUFFIX=...`
-would be defined in `env.shared`.
+`VAULTWARDEN_ADMIN_TOKEN` goes in `/opt/anchorage/vaultwarden/env.app`.
+`DOMAIN_SUFFIX` is set in `/etc/anchorage/anchorage.conf`.
 
-Enable and start the service:
+Enable and start:
 
 ```console
 systemctl enable --now container@vaultwarden.service
+systemctl restart caddy   # regenerates Caddyfile and updates DNS
 ```
 
-# Manage a service
-
-Use `systemctl [status|start|stop|restart] <service name>` for status, start, stop, restart (duh).
-
-Check logs:
+# Managing services
 
 ```console
+systemctl status container@vaultwarden.service
+systemctl restart container@vaultwarden.service
 journalctl -f -u container@vaultwarden.service
 ```
 
+# Reverse proxy and TLS
 
-# Reverse proxy
-
-Caddy makes it very simple to endow your services with certificates.
-
-In this example, we assume your local network suffix is `fritz.box`.
-
-Install with `apt install caddy`, then edit your configuration:
+Caddy issues TLS certificates using its internal CA. The root certificate is at:
 
 ```
-# /etc/caddy/Caddyfile
-{
-    # Use internal CA for local domains
-    local_certs
-}
-
-# Add one entry for each service with matching port number
-vault.fritz.box {
-    reverse_proxy 127.0.0.1:10002 {
-        header_up Host {host}
-        header_up X-Real-IP {remote}
-    }
-}
+/home/caddy/.local/share/caddy/pki/authorities/local/root.crt
 ```
 
-The root certificate will be in
-`/home/caddy/.local/share/caddy/pki/authorities/local/root.crt`, which you
-should distribute to all your devices.
+Distribute this to all devices that need to reach your services.
 
-Finally, add a DNS entry for `vault.fritz.box` pointing at the host.
+# Configuration
 
-# Automating the DNS update
-
-After you add a service to your Caddyfile, you have to restart caddy and
-propagate the new name via DNS. This can be automated as well. It's a bit
-dependent on your environment, but this works for a FritzBox.
-
-Drop a unit at `/etc/systemd/system/dns-update.service`:
+All system-wide settings live in `/etc/anchorage/anchorage.conf`:
 
 ```ini
-[Unit]
-Description=Update DNS entries for self-hosted services
-After=caddy.service
-BindsTo=caddy.service
-PartOf=caddy.service
-
-[Service]
-Type=oneshot
-# Adjust variables as necessary
-Environment=SUFFIX=fritz.box
-Environment=DNS_SERVER=192.168.178.1
-Environment=IP=192.168.178.42
-ExecStart=/opt/container/dns-update.sh
-
-[Install]
-WantedBy=caddy.service
+DOMAIN_SUFFIX=local     # DNS suffix for all service hostnames
+IP=192.168.1.42         # This host's IP address
+DNS_SERVER=192.168.1.1  # DNS server for dynamic updates (nsupdate)
+TTL=3600                # DNS record TTL in seconds
 ```
 
-Then enable it so it runs whenever caddy starts or restarts:
+`DOMAIN_SUFFIX` is the only required field. `IP` and `DNS_SERVER` are only
+needed if you enable `dns-update.service`.
+
+After editing the config, restart caddy to apply changes:
 
 ```console
-systemctl daemon-reload
-systemctl enable --now dns-update.service
+systemctl restart caddy
 ```
 
-`PartOf=caddy.service` propagates stop/restart from caddy, and
-`WantedBy=caddy.service` pulls the unit in whenever caddy is started.
+# DNS automation
+
+Enable `dns-update.service` so it runs whenever caddy starts or restarts.
+It reads `IP`, `DNS_SERVER`, and `DOMAIN_SUFFIX` from
+`/etc/anchorage/anchorage.conf`.
+
+```console
+systemctl enable dns-update.service
+systemctl restart caddy
+```
 
 # Access
 
-In my case, I enabled the WireGuard VPN in my FritzBox. I then use the [WG
-Tunnel](http://github.com/wgtunnel/wgtunnel) app for Android to access all my
-self-hosted services.
+For private access, enable the WireGuard VPN on your router and connect with
+[WG Tunnel](https://github.com/wgtunnel/wgtunnel) (Android) or the official
+WireGuard client.
 
-If you want your friends to access your services, perhaps something like
-[Tailscale](https://tailscale.com/) (or its FOSS pendant
-[Headscale](https://headscale.net/)) would be more approriate. Or, if you like
-to live dangerously, host everything on a VPS and expose caddy to the public.
-Personally, I wouldn't, though.
+For shared access with friends, consider
+[Tailscale](https://tailscale.com/) or its self-hosted alternative
+[Headscale](https://headscale.net/).

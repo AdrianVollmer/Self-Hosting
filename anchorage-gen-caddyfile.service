@@ -1,0 +1,14 @@
+[Unit]
+Description=Generate Caddyfile from Anchorage container definitions
+Documentation=man:anchorage(7)
+Before=caddy.service
+PartOf=caddy.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/anchorage/anchorage.conf
+EnvironmentFile=-/opt/anchorage/env.shared
+ExecStart=/usr/lib/anchorage/gen-caddyfile.py
+
+[Install]
+WantedBy=caddy.service

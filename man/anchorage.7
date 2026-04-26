@@ -1,0 +1,226 @@
+.TH ANCHORAGE 7 "2026-04-26" "anchorage" "Self-hosting Framework"
+.
+.SH NAME
+anchorage \- container self-hosting framework using podman, caddy, and systemd
+.
+.SH DESCRIPTION
+.B anchorage
+is a lightweight framework for self-hosting containerized applications on a
+home server or VPS.
+It ties together
+.BR podman (1),
+.BR caddy (1),
+and
+.BR systemd (1)
+to provide:
+.IP \(bu 4
+Per-service
+.BR podman-compose (1)
+lifecycle management via a systemd template unit.
+.IP \(bu
+Automatic TLS (via Caddy's internal CA) and reverse proxying.
+.IP \(bu
+Automatic Caddyfile generation from labels in
+.I docker-compose.yml
+files.
+.IP \(bu
+Optional DNS registration for local network hostnames.
+.
+.SH CONFIGURATION
+System-wide settings are stored in
+.IR /etc/anchorage/anchorage.conf ,
+which is a plain
+.IR KEY=VALUE
+file loaded by all anchorage systemd units.
+.PP
+.TP
+.B DOMAIN_SUFFIX
+.RB ( required )
+DNS suffix appended to every service hostname to form its fully-qualified
+domain name.
+Common values:
+.IR local ,
+.IR home.arpa ,
+.IR lan .
+.TP
+.B IP
+IP address of this host, registered in DNS for all service hostnames.
+Required only when
+.B dns-update.service
+is enabled.
+.TP
+.B DNS_SERVER
+Address of the DNS server that accepts dynamic updates via
+.BR nsupdate (1).
+Required only when
+.B dns-update.service
+is enabled.
+.TP
+.B TTL
+DNS record time-to-live in seconds.
+Defaults to 3600.
+.
+.SH DIRECTORY STRUCTURE
+All container service definitions live under
+.IR /opt/anchorage/ .
+Each service occupies its own subdirectory:
+.PP
+.nf
+/opt/anchorage/
+    env.shared              # Shared container env vars (optional)
+    <service>/
+        docker-compose.yml  # Compose file with caddy labels
+        env.app             # Service-specific env vars (optional)
+        data/               # Persistent data (recommended mount point)
+.fi
+.PP
+.I env.shared
+and
+.I env.app
+are passed to containers via
+.BR podman-compose (1)
+as
+.BR --env-file .
+They do not need to be shell-compatible; plain
+.I KEY=VALUE
+lines are sufficient.
+.
+.SH ADDING A SERVICE
+.SS 1. Create the service directory
+.PP
+.nf
+mkdir -p /opt/anchorage/myapp/data
+.fi
+.SS 2. Write docker-compose.yml
+Add
+.B caddy.host
+and
+.B caddy.port
+labels so anchorage can generate the reverse proxy entry automatically:
+.PP
+.nf
+# /opt/anchorage/myapp/docker-compose.yml
+services:
+  myapp:
+    image: example/myapp:latest
+    restart: unless-stopped
+    labels:
+      caddy.host: myapp        # subdomain (without DOMAIN_SUFFIX)
+      caddy.port: "10003"      # host port mapped in the ports section
+    ports:
+      - "10003:8080"
+    volumes:
+      - ./data:/data
+.fi
+.SS 3. Enable and start
+.PP
+.nf
+systemctl enable --now container@myapp.service
+systemctl restart caddy    # regenerates Caddyfile and updates DNS
+.fi
+.
+.SH REVERSE PROXY
+The Caddyfile at
+.I /etc/caddy/Caddyfile
+is
+.B generated automatically
+by
+.B anchorage-gen-caddyfile.service
+each time caddy starts or restarts.
+Do not edit it by hand; changes will be overwritten.
+.PP
+Caddy uses its internal CA (configured via
+.BR local_certs )
+to issue TLS certificates for all services.
+The root certificate is written to:
+.PP
+.nf
+/home/caddy/.local/share/caddy/pki/authorities/local/root.crt
+.fi
+.PP
+Install this certificate on every device that needs to reach your services.
+.
+.SH DNS AUTOMATION
+.B dns-update.service
+runs after caddy starts and registers all service hostnames found in the
+Caddyfile via
+.BR nsupdate (1).
+It reads
+.BR IP ,
+.BR DNS_SERVER ,
+and
+.B DOMAIN_SUFFIX
+from
+.IR /etc/anchorage/anchorage.conf .
+.PP
+The service is bound to caddy
+.RB ( PartOf=caddy.service )
+and runs automatically on every caddy start or restart.
+Enable it with:
+.PP
+.nf
+systemctl enable dns-update.service
+systemctl restart caddy
+.fi
+.
+.SH SYSTEMD UNITS
+.TP
+.B container@.service
+Template unit that manages a single container service.
+Instantiate as
+.B container@<name>.service
+where
+.I <name>
+matches the directory under
+.IR /opt/anchorage/ .
+Runs as the
+.B anchorage
+system user (rootless podman).
+.TP
+.B anchorage-gen-caddyfile.service
+Oneshot unit that regenerates
+.I /etc/caddy/Caddyfile
+from service labels.
+Runs before caddy and is restarted whenever caddy restarts.
+.TP
+.B dns-update.service
+Oneshot unit that pushes DNS A records to a local DNS server.
+Runs after caddy starts.
+.
+.SH FILES
+.TP
+.I /etc/anchorage/anchorage.conf
+System-wide configuration.
+.TP
+.I /opt/anchorage/
+Root directory for all service definitions.
+.TP
+.I /opt/anchorage/env.shared
+Environment variables passed into all containers (optional).
+.TP
+.I /etc/caddy/Caddyfile
+Auto-generated reverse proxy configuration.
+.TP
+.I /usr/lib/anchorage/gen-caddyfile.py
+Caddyfile generator script.
+.TP
+.I /usr/lib/anchorage/run.sh
+Container startup script invoked by the systemd template unit.
+.TP
+.I /usr/lib/anchorage/dns-update.sh
+DNS registration script.
+.TP
+.I /var/lib/anchorage/
+Home directory of the
+.B anchorage
+system user.
+.
+.SH SEE ALSO
+.BR podman-compose (1),
+.BR caddy (1),
+.BR systemd.service (5),
+.BR nsupdate (1)
+.
+.SH AUTHORS
+Maintained as part of the anchorage project.
+See the source repository for contribution guidelines.

@@ -1,8 +1,7 @@
 #!/bin/bash
+# Working directory is set to /opt/anchorage/$SERVICE_NAME by the systemd unit.
 
 set -e
-
-cd "$(dirname "$0")/$SERVICE_NAME"
 
 env_vars=""
 for file in env.app ../env.shared; do
