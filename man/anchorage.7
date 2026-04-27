@@ -20,9 +20,9 @@ lifecycle management via a systemd template unit.
 .IP \(bu
 Automatic TLS (via Caddy's internal CA) and reverse proxying.
 .IP \(bu
-Automatic Caddyfile generation from labels in
+Automatic reverse-proxy configuration from labels in
 .I docker-compose.yml
-files.
+files, imported into your existing Caddyfile.
 .IP \(bu
 Optional DNS registration for local network hostnames.
 .
@@ -120,19 +120,38 @@ systemctl restart caddy    # regenerates Caddyfile and updates DNS
 .fi
 .
 .SH REVERSE PROXY
-The Caddyfile at
-.I /etc/caddy/Caddyfile
-is
-.B generated automatically
-by
 .B anchorage-gen-caddyfile.service
-each time caddy starts or restarts.
-Do not edit it by hand; changes will be overwritten.
+generates reverse-proxy site blocks for all labelled services and writes
+them to
+.IR /etc/caddy/anchorage/services.caddy .
+The main Caddyfile is
+.B not
+managed by anchorage; only the following line is inserted into it during
+package installation:
 .PP
-Caddy uses its internal CA (configured via
+.nf
+import /etc/caddy/anchorage/*  # inserted by anchorage
+.fi
+.PP
+You are free to configure the rest of
+.I /etc/caddy/Caddyfile
+as you see fit.
+In particular, if you want Caddy to use its internal CA for TLS, you must
+add the global options block yourself:
+.PP
+.nf
+{
+    local_certs
+}
+.fi
+.PP
+Without
+.BR local_certs ,
+Caddy will attempt to obtain public certificates via ACME, which requires
+a publicly reachable domain.
+The root CA certificate (when using
 .BR local_certs )
-to issue TLS certificates for all services.
-The root certificate is written to:
+is written to:
 .PP
 .nf
 /home/caddy/.local/share/caddy/pki/authorities/local/root.crt
@@ -178,9 +197,8 @@ Runs as the
 system user (rootless podman).
 .TP
 .B anchorage-gen-caddyfile.service
-Oneshot unit that regenerates
-.I /etc/caddy/Caddyfile
-from service labels.
+Oneshot unit that writes Caddy site blocks for all labelled services to
+.IR /etc/caddy/anchorage/services.caddy .
 Runs before caddy and is restarted whenever caddy restarts.
 .TP
 .B dns-update.service
@@ -199,10 +217,16 @@ Root directory for all service definitions.
 Environment variables passed into all containers (optional).
 .TP
 .I /etc/caddy/Caddyfile
-Auto-generated reverse proxy configuration.
+Main Caddy configuration file, managed by the user.
+Anchorage adds an
+.B import
+directive here during installation and removes it on purge.
+.TP
+.I /etc/caddy/anchorage/services.caddy
+Auto-generated site blocks for anchorage-managed services.
 .TP
 .I /usr/lib/anchorage/gen-caddyfile.py
-Caddyfile generator script.
+Service snippet generator script.
 .TP
 .I /usr/lib/anchorage/run.sh
 Container startup script invoked by the systemd template unit.

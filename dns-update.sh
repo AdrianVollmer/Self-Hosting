@@ -19,7 +19,7 @@ if [ -z "${IP:-}" ]; then
   exit 1
 fi
 
-for DNS_NAME in $(grep -Eo "^[a-z0-9-]+\.${DOMAIN_SUFFIX}" /etc/caddy/Caddyfile); do
+for DNS_NAME in $(grep -Eo "^[a-z0-9-]+\.${DOMAIN_SUFFIX}" /etc/caddy/anchorage/services.caddy); do
   echo "Registering $DNS_NAME -> $IP"
   nsupdate <<EOF
 server ${DNS_SERVER}

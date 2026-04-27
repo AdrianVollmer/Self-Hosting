@@ -32,6 +32,7 @@ mkdir -p \
   "$PKG_DIR/usr/share/man/man7" \
   "$PKG_DIR/usr/share/doc/anchorage" \
   "$PKG_DIR/etc/anchorage" \
+  "$PKG_DIR/etc/caddy/anchorage" \
   "$PKG_DIR/etc/systemd/system" \
   "$PKG_DIR/var/lib/anchorage"
 
@@ -119,6 +120,9 @@ set -e
 ANCHORAGE_USER=anchorage
 ANCHORAGE_HOME=/var/lib/anchorage
 ANCHORAGE_DIR=/var/lib/anchorage
+CADDYFILE=/etc/caddy/Caddyfile
+IMPORT_MARKER="import /etc/caddy/anchorage/*"
+IMPORT_LINE="${IMPORT_MARKER}  # inserted by anchorage"
 
 # Create system user for rootless podman
 if ! id -u "$ANCHORAGE_USER" >/dev/null 2>&1; then
@@ -147,6 +151,16 @@ loginctl enable-linger "$ANCHORAGE_USER" 2>/dev/null || true
 
 # Create container root dir owned by anchorage
 install -d -m 755 -o "$ANCHORAGE_USER" -g "$ANCHORAGE_USER" "$ANCHORAGE_DIR"
+
+# Ensure Caddyfile imports anchorage snippets
+install -d -m 755 /etc/caddy/anchorage
+if [ -f "$CADDYFILE" ]; then
+  if ! grep -qF "$IMPORT_MARKER" "$CADDYFILE"; then
+    printf '\n%s\n' "$IMPORT_LINE" >> "$CADDYFILE"
+  fi
+else
+  printf '%s\n' "$IMPORT_LINE" > "$CADDYFILE"
+fi
 
 # Reload systemd so new units are visible
 systemctl daemon-reload
@@ -193,8 +207,11 @@ cat > "$PKG_DIR/DEBIAN/postrm" <<'EOF'
 set -e
 
 if [ "$1" = "purge" ]; then
-  # Remove generated Caddyfile (Caddy's own files are Caddy's responsibility)
-  rm -f /etc/caddy/Caddyfile
+  # Remove anchorage import line from Caddyfile (leave the rest intact)
+  if [ -f /etc/caddy/Caddyfile ]; then
+    sed -i '\|^import /etc/caddy/anchorage/|d' /etc/caddy/Caddyfile
+  fi
+  rm -rf /etc/caddy/anchorage
 
   # Disable linger and remove system user; preserve /var/lib/anchorage data
   loginctl disable-linger anchorage 2>/dev/null || true
