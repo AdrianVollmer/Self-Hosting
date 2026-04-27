@@ -10,4 +10,8 @@ for file in env.app ../env.shared; do
   fi
 done
 
-/usr/bin/podman-compose --env-file <(echo "$env_vars") up -d --force-recreate
+if [ -n "$env_vars" ]; then
+  /usr/bin/podman-compose --env-file <(echo "$env_vars") up -d --force-recreate
+else
+  /usr/bin/podman-compose up -d --force-recreate
+fi

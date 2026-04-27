@@ -9,6 +9,7 @@ Type=oneshot
 EnvironmentFile=/etc/anchorage/anchorage.conf
 EnvironmentFile=-/var/lib/anchorage/env.shared
 ExecStart=/usr/lib/anchorage/gen-caddyfile.py
+ExecStartPost=-/usr/bin/caddy reload
 
 [Install]
 WantedBy=caddy.service

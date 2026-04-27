@@ -116,7 +116,7 @@ services:
 .PP
 .nf
 systemctl enable --now container@myapp.service
-systemctl restart caddy    # regenerates Caddyfile and updates DNS
+systemctl start anchorage-gen-caddyfile.service    # regenerates config and reloads caddy
 .fi
 .
 .SH REVERSE PROXY

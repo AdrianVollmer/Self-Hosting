@@ -98,7 +98,8 @@ Enable and start:
 
 ```console
 systemctl enable --now container@vaultwarden.service
-systemctl restart caddy   # regenerates Caddyfile and updates DNS
+systemctl start anchorage-gen-caddyfile.service   # regenerates config and reloads caddy
+systemctl start dns-update.service                # register DNS (if enabled)
 ```
 
 # Managing services
@@ -133,11 +134,14 @@ TTL=3600                # DNS record TTL in seconds
 `DOMAIN_SUFFIX` is the only required field. `IP` and `DNS_SERVER` are only
 needed if you enable `dns-update.service`.
 
-After editing the config, restart caddy to apply changes:
+After editing the config, apply changes without downtime:
 
 ```console
-systemctl restart caddy
+systemctl start anchorage-gen-caddyfile.service
 ```
+
+A full `systemctl restart caddy` is still needed if you change Caddy's global
+options block or want to trigger DNS registration.
 
 # DNS automation
 

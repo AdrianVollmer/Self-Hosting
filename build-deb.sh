@@ -173,8 +173,10 @@ Next steps:
   1. Edit /etc/anchorage/anchorage.conf -- set DOMAIN_SUFFIX, and optionally
      IP and DNS_SERVER if you want automatic DNS registration.
   2. Add services under /var/lib/anchorage/<name>/docker-compose.yml.
-  4. Enable caddy:  systemctl enable --now caddy
-  5. Enable a service:  systemctl enable --now container@<name>.service
+  3. Enable caddy:  systemctl enable --now caddy
+  4. Add a service and apply:
+       systemctl enable --now container@<name>.service
+       systemctl start anchorage-gen-caddyfile.service
 
 See man anchorage(7) for full documentation.
 MSG
