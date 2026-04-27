@@ -16,7 +16,7 @@ Build and install the Debian package (requires `dpkg-deb`, `gzip`):
 
 ```console
 ./build-deb.sh
-dpkg -i anchorage_*.deb
+apt install ./anchorage_*.deb
 ```
 
 This installs all scripts, systemd units, and creates the `anchorage` system

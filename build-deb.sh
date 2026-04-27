@@ -232,4 +232,4 @@ OUTPUT="${REPO_ROOT}/${PACKAGE}_${VERSION}_${ARCH}.deb"
 dpkg-deb --build --root-owner-group "$PKG_DIR" "$OUTPUT"
 
 echo "Package written to: $OUTPUT"
-echo "Install with:  dpkg -i $OUTPUT"
+echo "Install with:  apt install ./$OUTPUT"
